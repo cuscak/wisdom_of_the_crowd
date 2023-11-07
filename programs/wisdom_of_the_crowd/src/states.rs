@@ -11,6 +11,8 @@ pub struct Question {
     pub question: [u8; QUESTION_LENGHT],
     pub treshold: u32,
     pub bump: u8,
+    //todo add finacial reward for people answering the question
+    //pub reward_per_answer: u64,
 }
 
 impl Question {
@@ -20,7 +22,7 @@ impl Question {
 
 #[account]
 pub struct Answer {
-    pub answer: u64,
+    pub answer: u64,        //so far only numbers allowed so we can calculate average
     pub question_acc: Pubkey,
     pub user: Pubkey,
 }

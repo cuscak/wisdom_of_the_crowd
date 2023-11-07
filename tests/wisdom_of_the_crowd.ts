@@ -164,6 +164,48 @@ describe("wisdom_of_the_crowd", () => {
       }
 
     });
+
+    it("User can update his answer", async () => {
+      const [questionPDA, questionBump] = getQuestionPDA(user1_question1, user1.publicKey, program.programId);
+      const [answerPDA, answerBump] = getAnswerPDA(user2.publicKey, questionPDA, program.programId);
+
+      const tx = await program.methods.changeAnswer(answerNewValue)
+        .accounts({
+          user: user2.publicKey,
+          answer: answerPDA,
+          questionAcc: questionPDA,
+        })
+        .signers([user2])
+        .rpc({ commitment: "confirmed", skipPreflight: true });
+
+      let answerAccount = await program.account.answer.fetch(answerPDA);
+      assert.strictEqual(answerAccount.answer.toString(), answerNewValue.toString());
+    });
+
+    it("User can delete his answer", async () => {
+      const [questionPDA, questionBump] = getQuestionPDA(user1_question1, user1.publicKey, program.programId);
+      const [answerPDA, answerBump] = getAnswerPDA(user2.publicKey, questionPDA, program.programId);
+
+      const tx = await program.methods.removeAnswer()
+        .accounts({
+          user: user2.publicKey,
+          answerAcc: answerPDA,
+        })
+        .signers([user2])
+        .rpc({ commitment: "confirmed" });
+
+      let thisShouldFail = "This should fail";
+
+      try {
+        let answerAccount = await program.account.answer.fetch(answerPDA);
+      } catch (error) {
+        thisShouldFail = "Failed"
+        assert.isTrue(error.message.includes("Account does not exist or has no data"))
+      }
+
+      assert.strictEqual(thisShouldFail, "Failed")
+    });
+
   });
 
 });
