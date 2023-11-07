@@ -33,7 +33,7 @@ pub struct InitializeQuestion<'info> {
     #[account(
         init,
         payer = user,
-        space = 8 + Question::LEN,
+        space = Question::LEN,
         seeds = [
             anchor_lang::solana_program::hash::hash(question.as_bytes()).to_bytes().as_ref(),
             QUESTION_SEED.as_bytes(),

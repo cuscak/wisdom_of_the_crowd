@@ -20,7 +20,7 @@ pub struct AddAnswer<'info> {
     #[account(
         init,
         payer = user,
-        space = 8 + Answer::LEN,
+        space = Answer::LEN,
         seeds = [
             ANSWER_SEED.as_bytes(),
             user.key().as_ref(),

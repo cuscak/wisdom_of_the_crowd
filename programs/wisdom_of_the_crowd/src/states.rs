@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+const DISCRIMINATOR_LENGTH: usize = 8;
+
 pub const QUESTION_LENGHT: usize = 500;
 
 pub const QUESTION_SEED: &str = "QUESTION_SEED";
@@ -17,7 +19,7 @@ pub struct Question {
 
 impl Question {
     // Pubkey + [u8, QUESTION_LENGHT] + u32 + u8
-    pub const LEN: usize = 32 + QUESTION_LENGHT + 4 + 1;
+    pub const LEN: usize = DISCRIMINATOR_LENGTH + 32 + QUESTION_LENGHT + 4 + 1;
 }
 
 #[account]
@@ -29,5 +31,5 @@ pub struct Answer {
 
 impl Answer {
     // u64 + Pubkey + Pubkey
-    pub const LEN: usize = 8 + 32 + 32;
+    pub const LEN: usize = DISCRIMINATOR_LENGTH + 8 + 32 + 32;
 }
