@@ -8,6 +8,7 @@ import crypto from "crypto";
 
 const QUESTION_SEED = "QUESTION_SEED";
 const ANSWER_SEED = "ANSWER_SEED";
+const QUESTION_STATS_SEED = "QUESTION_STATS_SEED";
 
 describe("wisdom_of_the_crowd", () => {
   // Configure the client to use the local cluster.
@@ -61,9 +62,12 @@ describe("wisdom_of_the_crowd", () => {
 
     it("User can create question", async () => {
       const [questionPDA, questionBump] = getQuestionPDA(user1_question1, user1.publicKey, program.programId);
+      const [questionStatsPDA, questionStatsBump] = getQuestionStatsPDA(user1.publicKey, questionPDA, program.programId);
+
       const tx = await program.methods.initialize(user1_question1, user1_question1_treshold)
         .accounts({
           questionAcc: questionPDA,
+          questionStatsAcc: questionStatsPDA,
           user: user1.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
@@ -80,9 +84,12 @@ describe("wisdom_of_the_crowd", () => {
 
     it("User can create second questions", async () => {
       const [questionPDA, questionBump] = getQuestionPDA(user1_question2, user1.publicKey, program.programId);
+      const [questionStatsPDA, questionStatsBump] = getQuestionStatsPDA(user1.publicKey, questionPDA, program.programId);
+
       const tx = await program.methods.initialize(user1_question2, user1_question2_treshold)
         .accounts({
           questionAcc: questionPDA,
+          questionStatsAcc: questionStatsPDA,
           user: user1.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
@@ -102,10 +109,12 @@ describe("wisdom_of_the_crowd", () => {
 
       try {
         const [questionPDA, questionBump] = getQuestionPDA(user2_question, user2.publicKey, program.programId);
+        const [questionStatsPDA, questionStatsBump] = getQuestionStatsPDA(user2.publicKey, questionPDA, program.programId);
 
         const tx = await program.methods.initialize(user2_question, user2_question_treshold)
           .accounts({
             questionAcc: questionPDA,
+            questionStatsAcc: questionStatsPDA,
             user: user2.publicKey,
             systemProgram: anchor.web3.SystemProgram.programId,
           })
@@ -221,6 +230,16 @@ function getQuestionPDA(question: string, user: PublicKey, programID: PublicKey)
       question_seed,
       anchor.utils.bytes.utf8.encode(QUESTION_SEED),
       user.toBuffer()
+    ], programID);
+}
+
+function getQuestionStatsPDA(user: PublicKey, questionAcc: PublicKey, programID: PublicKey) {
+
+  return PublicKey.findProgramAddressSync(
+    [
+      anchor.utils.bytes.utf8.encode(QUESTION_STATS_SEED),
+      questionAcc.toBuffer(),
+      user.toBuffer(),
     ], programID);
 }
 

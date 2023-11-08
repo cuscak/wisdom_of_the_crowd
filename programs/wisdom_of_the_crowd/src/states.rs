@@ -6,6 +6,7 @@ pub const QUESTION_LENGHT: usize = 500;
 
 pub const QUESTION_SEED: &str = "QUESTION_SEED";
 pub const ANSWER_SEED: &str = "ANSWER_SEED";
+pub const QUESTION_STATS_SEED: &str = "QUESTION_STATS_SEED";
 
 #[account]
 pub struct Question {
@@ -23,8 +24,20 @@ impl Question {
 }
 
 #[account]
+pub struct QuestionStats {
+    pub question_acc: Pubkey,
+    pub answers_count: u32,
+    pub average: u64,
+}
+
+impl QuestionStats {
+    // Pubkey + u32 + u64
+    pub const LEN: usize = DISCRIMINATOR_LENGTH + 32 + 4 + 8;
+}
+
+#[account]
 pub struct Answer {
-    pub answer: u64,        //so far only numbers allowed so we can calculate average
+    pub answer: u64, //so far only numbers allowed so we can calculate average
     pub question_acc: Pubkey,
     pub user: Pubkey,
 }

@@ -24,6 +24,13 @@ pub fn initialize_question(
     created_question.treshold = treshold;
     created_question.bump = *ctx.bumps.get("question_acc").unwrap();
 
+    // initialize question stats
+    let question_stats = &mut ctx.accounts.question_stats_acc;
+    question_stats.question_acc = ctx.accounts.question_acc.key();
+    question_stats.answers_count = 0;
+    question_stats.average = 0;
+
+
     Ok(())
 }
 
@@ -42,7 +49,22 @@ pub struct InitializeQuestion<'info> {
         bump
     )]
     pub question_acc: Account<'info, Question>,
+
+    #[account(
+        init,
+        payer = user,
+        space = QuestionStats::LEN,
+        seeds = [
+            QUESTION_STATS_SEED.as_bytes(),
+            question_acc.key().as_ref(),
+            user.key().as_ref(),
+        ],
+        bump
+    )]
+    pub question_stats_acc: Account<'info, QuestionStats>,
+
     #[account(mut)]
     pub user: Signer<'info>,
+
     pub system_program: Program<'info, System>,
 }
