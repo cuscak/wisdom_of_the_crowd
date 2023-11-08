@@ -5,4 +5,7 @@ pub enum WisdomOfCrowdError {
     #[msg("Question is too long")]
     QuestionTooLong,
     AnswerIsNotNumber,
+    AnswerCountOverflow,
+    AverageCalculationError,
+    SumOverflow
 }

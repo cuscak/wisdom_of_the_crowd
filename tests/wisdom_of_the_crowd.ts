@@ -16,9 +16,10 @@ describe("wisdom_of_the_crowd", () => {
 
   const program = anchor.workspace.WisdomOfTheCrowd as Program<WisdomOfTheCrowd>;
 
-  //#region -- question consts
+  //#region -- consts
   const user1 = anchor.web3.Keypair.generate();
   const user2 = anchor.web3.Keypair.generate();
+  const user3 = anchor.web3.Keypair.generate();
 
   const user1_question1 = "What will be the price of SOL at the end of the year 2023?";
   const user1_question1_treshold = 1000;
@@ -31,7 +32,12 @@ describe("wisdom_of_the_crowd", () => {
 
   const answerValue = new BN(50);
   const answerNewValue = new BN(500);
-  //#endregion -- question consts
+
+  const initialAvarage = new BN(0);
+  const initialSum = new BN(0);
+
+  const user3AnswerValue = new BN(33);
+  //#endregion -- consts
 
   before(async () => {
     //#region -- get some money for users
@@ -55,6 +61,14 @@ describe("wisdom_of_the_crowd", () => {
       lastValidBlockHeight: (await connection.getSlot()) + 500, // Add some reasonable number for block height expectation
     }, "confirmed");
 
+    //user3
+    const airdropSignature3 = await connection.requestAirdrop(user3.publicKey, 1000000000);
+    await connection.confirmTransaction({
+      signature: airdropSignature3,
+      blockhash: (await connection.getLatestBlockhash()).blockhash,
+      lastValidBlockHeight: (await connection.getSlot()) + 500, // Add some reasonable number for block height expectation
+    }, "confirmed");
+
     //#endregion
   });
 
@@ -62,7 +76,7 @@ describe("wisdom_of_the_crowd", () => {
 
     it("User can create question", async () => {
       const [questionPDA, questionBump] = getQuestionPDA(user1_question1, user1.publicKey, program.programId);
-      const [questionStatsPDA, questionStatsBump] = getQuestionStatsPDA(user1.publicKey, questionPDA, program.programId);
+      const [questionStatsPDA, questionStatsBump] = getQuestionStatsPDA(questionPDA, program.programId);
 
       const tx = await program.methods.initialize(user1_question1, user1_question1_treshold)
         .accounts({
@@ -80,11 +94,16 @@ describe("wisdom_of_the_crowd", () => {
 
       assert.strictEqual(questionAccount.question.toString(), paddedByteArray_test_question.toString());
       assert.strictEqual(questionAccount.treshold, user1_question1_treshold);
+
+      let questionStatsAccount = await program.account.questionStats.fetch(questionStatsPDA);
+      assert.strictEqual(questionStatsAccount.answersCount, 0);
+      assert.strictEqual(questionStatsAccount.average.toString(), initialAvarage.toString());
+      assert.strictEqual(questionStatsAccount.sum.toString(), initialSum.toString());
     });
 
     it("User can create second questions", async () => {
       const [questionPDA, questionBump] = getQuestionPDA(user1_question2, user1.publicKey, program.programId);
-      const [questionStatsPDA, questionStatsBump] = getQuestionStatsPDA(user1.publicKey, questionPDA, program.programId);
+      const [questionStatsPDA, questionStatsBump] = getQuestionStatsPDA(questionPDA, program.programId);
 
       const tx = await program.methods.initialize(user1_question2, user1_question2_treshold)
         .accounts({
@@ -109,7 +128,7 @@ describe("wisdom_of_the_crowd", () => {
 
       try {
         const [questionPDA, questionBump] = getQuestionPDA(user2_question, user2.publicKey, program.programId);
-        const [questionStatsPDA, questionStatsBump] = getQuestionStatsPDA(user2.publicKey, questionPDA, program.programId);
+        const [questionStatsPDA, questionStatsBump] = getQuestionStatsPDA(questionPDA, program.programId);
 
         const tx = await program.methods.initialize(user2_question, user2_question_treshold)
           .accounts({
@@ -134,12 +153,14 @@ describe("wisdom_of_the_crowd", () => {
   describe("Answering questions", async () => {
     it("User can add answer to created question", async () => {
       const [questionPDA, questionBump] = getQuestionPDA(user1_question1, user1.publicKey, program.programId);
+      const [questionStatsPDA, questionStatsBump] = getQuestionStatsPDA(questionPDA, program.programId);
       const [answerPDA, answerBump] = getAnswerPDA(user2.publicKey, questionPDA, program.programId);
 
       const tx = await program.methods.createAnswer(answerValue)
         .accounts({
           user: user2.publicKey,
           answer: answerPDA,
+          questionStatsAcc: questionStatsPDA,
           questionAcc: questionPDA,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
@@ -149,12 +170,20 @@ describe("wisdom_of_the_crowd", () => {
       let answerAccount = await program.account.answer.fetch(answerPDA);
       assert.strictEqual(answerAccount.answer.toString(), answerValue.toString());
       assert.strictEqual(answerAccount.questionAcc.toString(), questionPDA.toString());
+
+      //check if question stats where updated
+      let questionStatsAccount = await program.account.questionStats.fetch(questionStatsPDA);
+      assert.strictEqual(questionStatsAccount.answersCount, 1);
+      assert.strictEqual(questionStatsAccount.average.toString(), answerValue.toString());
+      assert.strictEqual(questionStatsAccount.sum.toString(), answerValue.toString());
+
     });
 
     it("User cant answer same question again", async () => {
       let should_fail = "This should fail";
 
       const [questionPDA, questionBump] = getQuestionPDA(user1_question1, user1.publicKey, program.programId);
+      const [questionStatsPDA, questionStatsBump] = getQuestionStatsPDA(questionPDA, program.programId);
       const [answerPDA, answerBump] = getAnswerPDA(user2.publicKey, questionPDA, program.programId);
 
       try {
@@ -162,6 +191,7 @@ describe("wisdom_of_the_crowd", () => {
           .accounts({
             user: user2.publicKey,
             answer: answerPDA,
+            questionStatsAcc: questionStatsPDA,
             questionAcc: questionPDA,
             systemProgram: anchor.web3.SystemProgram.programId,
           })
@@ -176,12 +206,14 @@ describe("wisdom_of_the_crowd", () => {
 
     it("User can update his answer", async () => {
       const [questionPDA, questionBump] = getQuestionPDA(user1_question1, user1.publicKey, program.programId);
+      const [questionStatsPDA, questionStatsBump] = getQuestionStatsPDA(questionPDA, program.programId);
       const [answerPDA, answerBump] = getAnswerPDA(user2.publicKey, questionPDA, program.programId);
 
       const tx = await program.methods.changeAnswer(answerNewValue)
         .accounts({
           user: user2.publicKey,
           answer: answerPDA,
+          questionStatsAcc: questionStatsPDA,
           questionAcc: questionPDA,
         })
         .signers([user2])
@@ -189,19 +221,65 @@ describe("wisdom_of_the_crowd", () => {
 
       let answerAccount = await program.account.answer.fetch(answerPDA);
       assert.strictEqual(answerAccount.answer.toString(), answerNewValue.toString());
+
+      //check if question stats where updated
+      let questionStatsAccount = await program.account.questionStats.fetch(questionStatsPDA);
+      assert.strictEqual(questionStatsAccount.answersCount, 1);
+      assert.strictEqual(questionStatsAccount.average.toString(), answerNewValue.toString());
+      assert.strictEqual(questionStatsAccount.sum.toString(), answerNewValue.toString());
+    });
+
+    it("Another user added his answer and question stats are correctly updated", async () => {
+      const [questionPDA, questionBump] = getQuestionPDA(user1_question1, user1.publicKey, program.programId);
+      const [questionStatsPDA, questionStatsBump] = getQuestionStatsPDA(questionPDA, program.programId);
+      const [answerPDA, answerBump] = getAnswerPDA(user3.publicKey, questionPDA, program.programId);
+
+      const tx = await program.methods.createAnswer(user3AnswerValue)
+        .accounts({
+          user: user3.publicKey,
+          answer: answerPDA,
+          questionStatsAcc: questionStatsPDA,
+          questionAcc: questionPDA,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .signers([user3])
+        .rpc({ commitment: "confirmed" });
+
+      //check if question stats where updated
+      let questionStatsAccount = await program.account.questionStats.fetch(questionStatsPDA);
+      assert.strictEqual(questionStatsAccount.answersCount, 2);
+
+      //question should have 2 answers, first was updated to value answerNewValue = 500, second is user3AnswerValue = 33
+      const expectedSum = answerNewValue.toNumber() + user3AnswerValue.toNumber();
+      const expectedAverage = Math.floor(expectedSum / 2);
+
+      assert.strictEqual(questionStatsAccount.average.toString(), expectedAverage.toString());
+      assert.strictEqual(questionStatsAccount.sum.toString(), expectedSum.toString());
+
     });
 
     it("User can delete his answer", async () => {
       const [questionPDA, questionBump] = getQuestionPDA(user1_question1, user1.publicKey, program.programId);
+      const [questionStatsPDA, questionStatsBump] = getQuestionStatsPDA(questionPDA, program.programId);
       const [answerPDA, answerBump] = getAnswerPDA(user2.publicKey, questionPDA, program.programId);
 
       const tx = await program.methods.removeAnswer()
         .accounts({
           user: user2.publicKey,
           answerAcc: answerPDA,
+          questionStatsAcc: questionStatsPDA,
         })
         .signers([user2])
-        .rpc({ commitment: "confirmed" });
+        .rpc({ commitment: "confirmed", skipPreflight: true });
+
+      //check if question stats where updated
+      let questionStatsAccount = await program.account.questionStats.fetch(questionStatsPDA);
+      assert.strictEqual(questionStatsAccount.answersCount, 1);
+
+      //question should have 1 answers, first was deleted and only second answer left where user3AnswerValue = 33
+
+      assert.strictEqual(questionStatsAccount.average.toString(), user3AnswerValue.toString());
+      assert.strictEqual(questionStatsAccount.sum.toString(), user3AnswerValue.toString());
 
       let thisShouldFail = "This should fail";
 
@@ -233,13 +311,12 @@ function getQuestionPDA(question: string, user: PublicKey, programID: PublicKey)
     ], programID);
 }
 
-function getQuestionStatsPDA(user: PublicKey, questionAcc: PublicKey, programID: PublicKey) {
+function getQuestionStatsPDA(questionAcc: PublicKey, programID: PublicKey) {
 
   return PublicKey.findProgramAddressSync(
     [
       anchor.utils.bytes.utf8.encode(QUESTION_STATS_SEED),
       questionAcc.toBuffer(),
-      user.toBuffer(),
     ], programID);
 }
 

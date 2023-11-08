@@ -1,12 +1,36 @@
-use crate::states::*;
+use crate::{errors::WisdomOfCrowdError, states::*};
 use anchor_lang::prelude::*;
 
 pub fn update_answer(ctx: Context<UpdateAnswer>, new_answer: u64) -> Result<()> {
-
     let answer_acc = &mut ctx.accounts.answer;
-    msg!("old answer: {}", answer_acc.answer);
+
+    let old_answer = answer_acc.answer;
     answer_acc.answer = new_answer;
-    msg!("new answer: {}", answer_acc.answer);
+
+    //update question stats
+    let question_stats = &mut ctx.accounts.question_stats_acc;
+
+    let remove_old_answer = match question_stats.sum.checked_sub(old_answer) {
+        Some(sum) => sum,
+        None => return Err(WisdomOfCrowdError::SumOverflow.into()),
+    };
+    question_stats.sum = remove_old_answer;
+
+    let add_new_answer = match question_stats.sum.checked_add(new_answer) {
+        Some(sum) => sum,
+        None => return Err(WisdomOfCrowdError::SumOverflow.into()),
+    };
+    question_stats.sum = add_new_answer;
+
+    let calculate_average = match question_stats
+        .sum
+        .checked_div(question_stats.answers_count as u64)
+    {
+        Some(average) => average,
+        None => return Err(WisdomOfCrowdError::AverageCalculationError.into()),
+    };
+
+    question_stats.average = calculate_average;
 
     Ok(())
 }
@@ -27,6 +51,16 @@ pub struct UpdateAnswer<'info> {
         bump,
     )]
     pub answer: Account<'info, Answer>,
+
+    #[account(
+        mut,
+        seeds = [
+            QUESTION_STATS_SEED.as_bytes(),
+            question_stats_acc.question_acc.key().as_ref(),
+        ],
+        bump = question_stats_acc.bump,
+    )]
+    pub question_stats_acc: Account<'info, QuestionStats>,
 
     #[account(
         mut,

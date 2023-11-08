@@ -26,9 +26,12 @@ pub fn initialize_question(
 
     // initialize question stats
     let question_stats = &mut ctx.accounts.question_stats_acc;
-    question_stats.question_acc = ctx.accounts.question_acc.key();
+
     question_stats.answers_count = 0;
     question_stats.average = 0;
+    question_stats.sum = 0;
+    question_stats.question_acc = ctx.accounts.question_acc.key();
+    question_stats.bump = *ctx.bumps.get("question_stats_acc").unwrap();
 
 
     Ok(())
@@ -57,7 +60,6 @@ pub struct InitializeQuestion<'info> {
         seeds = [
             QUESTION_STATS_SEED.as_bytes(),
             question_acc.key().as_ref(),
-            user.key().as_ref(),
         ],
         bump
     )]

@@ -27,12 +27,14 @@ impl Question {
 pub struct QuestionStats {
     pub question_acc: Pubkey,
     pub answers_count: u32,
+    pub sum: u64,
     pub average: u64,
+    pub bump: u8,
 }
 
 impl QuestionStats {
-    // Pubkey + u32 + u64
-    pub const LEN: usize = DISCRIMINATOR_LENGTH + 32 + 4 + 8;
+    // Pubkey + u32 + u64+ u64 + u8
+    pub const LEN: usize = DISCRIMINATOR_LENGTH + 32 + 4 + 8 + 8 + 1;
 }
 
 #[account]
