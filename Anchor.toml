@@ -8,7 +8,7 @@ wisdom_of_the_crowd = "F4R832vNyeoCnxFAEwVkhRcapXiA3CsAyRvmwWHEByTt"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "Localnet"
 wallet = "/home/cuscak/.config/solana/id.json"
 
 [scripts]
