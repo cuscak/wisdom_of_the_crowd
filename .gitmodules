@@ -1,1 +1,4 @@
 
+[submodule "app/frontend"]
+	path = app/frontend
+	url = https://github.com/cuscak/dapp-scaffold
