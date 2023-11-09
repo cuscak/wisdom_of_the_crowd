@@ -4,8 +4,6 @@
 
 The **Wisdom of the Crowd** theory posits that collective or averaged predictions from a group can often surpass the accuracy of estimates provided by individual experts. This decentralized application (dapp) embodies the first simple implementation of this theory.
 
-Thi dapp is a first, simple implementation of the above theory.
-
 ## Current Features
 
 Users have the ability to:
