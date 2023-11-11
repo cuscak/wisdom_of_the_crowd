@@ -62,8 +62,13 @@ anchor test
 ```
 
 ### Frontend
-#### Installation
 
+Clone this repo into "app/frontend" folder:
+```
+https://github.com/cuscak/dapp-scaffold
+```
+
+#### Installation
 ```bash
 cd app/frontend/
 npm install
