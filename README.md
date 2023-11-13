@@ -42,6 +42,8 @@ Answers: {
 ```
 
 ### Solana program
+Th eprogram is deployed on Devnet: F4R832vNyeoCnxFAEwVkhRcapXiA3CsAyRvmwWHEByTt
+
 #### Installation
 
 #### Build and Run
